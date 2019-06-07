@@ -25,6 +25,10 @@ const UserSchema = Schema({
   avatar: {
     type: String
   },
+  status: {
+    type: String,
+    default: "Active"
+  },
   date: {
     type: Date,
     default: Date.now()

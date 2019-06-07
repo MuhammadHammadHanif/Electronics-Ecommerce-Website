@@ -81,6 +81,12 @@ router.post("/login", (req, res) => {
       errors.email = "User not found";
       return res.status(400).send(errors);
     }
+
+    if (user.status === "Block") {
+      errors.email = "User is Blocked by the Admin";
+      return res.status(400).send(errors);
+    }
+
     if (role !== user.role) {
       errors.role = "Role is incorrect";
       return res.status(400).send(errors);
@@ -118,6 +124,13 @@ router.get(
   "/current",
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
+    const errors = {};
+    // check status
+    const checkStatus = req.user.status === "Block";
+    if (checkStatus) {
+      errors.email = "User is Blocked by admin";
+      return res.status(400).send(errors);
+    }
     res.send(req.user);
   }
 );

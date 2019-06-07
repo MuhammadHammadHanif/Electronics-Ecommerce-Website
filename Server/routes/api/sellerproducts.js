@@ -31,10 +31,10 @@ router.post(
     const buff = req.files.map(buff => buff.buffer);
     const { errors, isValid } = validateSellerProductsInput(req.body, buff);
 
-    // check role
-    const checkRole = req.user.role != "Seller";
-    if (checkRole) {
-      errors.email = "You are not authorized to change password";
+    // check status
+    const checkStatus = req.user.status === "Block";
+    if (checkStatus) {
+      errors.email = "User is Blocked by admin";
       return res.status(400).send(errors);
     }
 
@@ -133,18 +133,19 @@ router.get(
   "/",
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
-    // check role
-    const checkRole = req.user.role != "Seller";
-    if (checkRole) {
-      errors.email = "You are not authorized to change password";
+    const errors = {};
+    // check status
+    const checkStatus = req.user.status === "Block";
+    if (checkStatus) {
+      errors.email = "User is Blocked by admin";
       return res.status(400).send(errors);
     }
-    const errors = {};
+
     // find by user id
     SellerProduct.find({ user: req.user._id })
       .populate("user", ["name", "avatar"])
       .then(products => {
-        if (!products) {
+        if (products.length === 0) {
           errors.products = "There is no products for this Seller";
           return res.status(404).send(errors);
         }
@@ -161,13 +162,14 @@ router.get(
   "/:p_id",
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
-    // check role
-    const checkRole = req.user.role != "Seller";
-    if (checkRole) {
-      errors.email = "You are not authorized to change password";
+    const errors = {};
+    // check status
+    const checkStatus = req.user.status === "Block";
+    if (checkStatus) {
+      errors.email = "User is Blocked by admin";
       return res.status(400).send(errors);
     }
-    const errors = {};
+
     // find by user id and product id
     SellerProduct.findOne({ _id: req.params.p_id, user: req.user._id })
       .populate("user", ["name", "avatar"])
@@ -190,6 +192,13 @@ router.post(
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
     const { errors, isValid } = validateChangePasswordInput(req.body);
+
+    // check status
+    const checkStatus = req.user.status === "Block";
+    if (checkStatus) {
+      errors.email = "User is Blocked by admin";
+      return res.status(400).send(errors);
+    }
 
     // check role
     const checkRole = req.user.role != "Seller";
@@ -239,12 +248,14 @@ router.delete(
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
     let errors = {};
-    // check role
-    const checkRole = req.user.role != "Seller";
-    if (checkRole) {
-      errors.email = "You are not authorized to change password";
+
+    // check status
+    const checkStatus = req.user.status === "Block";
+    if (checkStatus) {
+      errors.email = "User is Blocked by admin";
       return res.status(400).send(errors);
     }
+
     // find by user id and product id
     SellerProduct.findOneAndDelete({
       _id: req.params.p_id,

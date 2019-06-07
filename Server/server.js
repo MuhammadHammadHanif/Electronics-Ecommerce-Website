@@ -5,6 +5,7 @@ const passport = require("passport");
 
 const user = require("./routes/api/user");
 const seller = require("./routes/api/sellerproducts");
+const admin = require("./routes/api/admin");
 
 const app = new express();
 
@@ -21,6 +22,7 @@ require("./config/passport")(passport);
 // routes
 app.use("/api/user", user);
 app.use("/api/seller", seller);
+app.use("/api/admin", admin);
 
 // Port to run server on
 const port = process.env.PORT || 5000;
