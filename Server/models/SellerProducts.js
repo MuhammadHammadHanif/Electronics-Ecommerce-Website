@@ -13,22 +13,29 @@ const SellerProductsSchema = new Schema({
   },
   sellername: {
     type: String,
-    trim: true
+    trim: true,
+    required: true
   },
   productcode: {
     type: String,
     trim: true,
     required: true
   },
+  quantity: {
+    type: String,
+    required: true
+  },
   images: {
-    type: [String],
+    type: [Buffer],
     required: true
   },
   colors: {
-    type: [String]
+    type: [String],
+    required: true
   },
   sizes: {
-    type: [String]
+    type: [String],
+    required: true
   },
   categories: {
     type: [String],
@@ -42,7 +49,8 @@ const SellerProductsSchema = new Schema({
     type: String
   },
   description: {
-    type: String
+    type: String,
+    required: true
   },
   additionalinformation: {
     weight: {
@@ -55,6 +63,22 @@ const SellerProductsSchema = new Schema({
       type: String
     }
   },
+  productstatus: [
+    {
+      user: {
+        type: Schema.Types.ObjectId,
+        ref: "users"
+      },
+      status: {
+        type: String,
+        default: "Pending"
+      },
+      date: {
+        type: Date,
+        default: Date.now()
+      }
+    }
+  ],
   reviews: [
     {
       user: {
@@ -66,7 +90,8 @@ const SellerProductsSchema = new Schema({
         required: true
       },
       name: {
-        type: String
+        type: String,
+        required: true
       },
       email: {
         type: String,

@@ -4,11 +4,12 @@ const bodyParser = require("body-parser");
 const passport = require("passport");
 
 const user = require("./routes/api/user");
+const seller = require("./routes/api/sellerproducts");
 
 const app = new express();
 
 // Body parser middleware
-app.use(bodyParser.urlencoded({ extended: false }));
+app.use(bodyParser.urlencoded({ extended: true }));
 app.use(bodyParser.json());
 
 // passport middleware
@@ -19,6 +20,7 @@ require("./config/passport")(passport);
 
 // routes
 app.use("/api/user", user);
+app.use("/api/seller", seller);
 
 // Port to run server on
 const port = process.env.PORT || 5000;
