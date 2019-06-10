@@ -90,12 +90,10 @@ const SellerProductsSchema = new Schema({
         required: true
       },
       name: {
-        type: String,
-        required: true
+        type: String
       },
       email: {
-        type: String,
-        required: true
+        type: String
       },
       date: {
         type: Date,

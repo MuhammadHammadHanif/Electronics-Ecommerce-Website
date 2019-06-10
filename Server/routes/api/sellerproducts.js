@@ -8,10 +8,12 @@ const upload = require("../../config/multer");
 // Models
 const User = require("../../models/User");
 const SellerProduct = require("../../models/SellerProducts");
+const Customer = require("../../models/Customer");
 
 // load input validation
 const validateSellerProductsInput = require("../../validation/sellerproducts");
 const validateChangePasswordInput = require("../../validation/changepassword");
+const validateChangeProductStatusInput = require("../../validation/changeproductstatus");
 
 const router = new express.Router();
 
@@ -30,6 +32,13 @@ router.post(
   (req, res) => {
     const buff = req.files.map(buff => buff.buffer);
     const { errors, isValid } = validateSellerProductsInput(req.body, buff);
+
+    // check role
+    const checkRole = req.user.role != "Seller";
+    if (checkRole) {
+      errors.email = "You are not authorized";
+      return res.status(400).send(errors);
+    }
 
     // check status
     const checkStatus = req.user.status === "Block";
@@ -110,11 +119,11 @@ router.post(
               errors.productcode = "This Product code already exists";
               return res.status(400).send(errors);
             }
+            // create new product
+            new SellerProduct(productFields)
+              .save()
+              .then(product => res.status(201).send(product));
           });
-          // create new product
-          new SellerProduct(productFields)
-            .save()
-            .then(product => res.status(201).send(product));
         }
       })
       .catch(err => console.log(err));
@@ -134,6 +143,14 @@ router.get(
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
     const errors = {};
+
+    // check role
+    const checkRole = req.user.role != "Seller";
+    if (checkRole) {
+      errors.email = "You are not authorized";
+      return res.status(400).send(errors);
+    }
+
     // check status
     const checkStatus = req.user.status === "Block";
     if (checkStatus) {
@@ -155,6 +172,41 @@ router.get(
   }
 );
 
+// @route  GET api/seller/getallproductstatus
+// @desc   Get all purchased products
+// @access Private
+router.get(
+  "/getallproductstatus",
+  passport.authenticate("jwt", { session: false }),
+  (req, res) => {
+    const errors = {};
+
+    // check role
+    const checkRole = req.user.role != "Seller";
+    if (checkRole) {
+      errors.email = "You are not authorized";
+      return res.status(400).send(errors);
+    }
+
+    // check status
+    const checkStatus = req.user.status === "Block";
+    if (checkStatus) {
+      errors.email = "User is Blocked by admin";
+      return res.status(400).send(errors);
+    }
+
+    // find by user id
+    SellerProduct.find({ user: req.user._id })
+      .then(products => {
+        res.send(products);
+      })
+      .catch(err => {
+        errors.products = "There are no products";
+        res.status(404).send(errors);
+      });
+  }
+);
+
 // @route  GET api/seller/:p_id
 // @desc   Get product
 // @access Private
@@ -163,6 +215,14 @@ router.get(
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
     const errors = {};
+
+    // check role
+    const checkRole = req.user.role != "Seller";
+    if (checkRole) {
+      errors.email = "You are not authorized";
+      return res.status(400).send(errors);
+    }
+
     // check status
     const checkStatus = req.user.status === "Block";
     if (checkStatus) {
@@ -193,17 +253,17 @@ router.post(
   (req, res) => {
     const { errors, isValid } = validateChangePasswordInput(req.body);
 
+    // check role
+    const checkRole = req.user.role != "Seller";
+    if (checkRole) {
+      errors.email = "You are not authorized";
+      return res.status(400).send(errors);
+    }
+
     // check status
     const checkStatus = req.user.status === "Block";
     if (checkStatus) {
       errors.email = "User is Blocked by admin";
-      return res.status(400).send(errors);
-    }
-
-    // check role
-    const checkRole = req.user.role != "Seller";
-    if (checkRole) {
-      errors.email = "You are not authorized to change password";
       return res.status(400).send(errors);
     }
 
@@ -212,7 +272,7 @@ router.post(
       return res.status(400).send(errors);
     }
 
-    const { email, password } = req.body;
+    const { email, password, oldpassword } = req.body;
 
     User.findOne({ email })
       .then(user => {
@@ -221,6 +281,14 @@ router.post(
           errors.email = "Email Doesn't Exists";
           return res.status(400).send(errors);
         }
+        // checking old password
+        bycrypt.compare(oldpassword, user.password).then(isMatch => {
+          // user found
+          if (!isMatch) {
+            errors.oldpassword = "Incorrect Password";
+            return res.status(400).send(errors);
+          }
+        });
         user.password = password;
         bycrypt.genSalt(10, (err, salt) => {
           bycrypt.hash(user.password, salt, (err, hash) => {
@@ -240,14 +308,21 @@ router.post(
   }
 );
 
-// @route  DELETE api/seller/:p_id
-// @desc   Delete Product
+// @route  POST api/seller/changeproductstatus/:user_id/:p_id
+// @desc   Change product status
 // @access Private
-router.delete(
-  "/:p_id",
+router.post(
+  "/changeproductstatus/:user_id/:p_id",
   passport.authenticate("jwt", { session: false }),
   (req, res) => {
-    let errors = {};
+    const { errors, isValid } = validateChangeProductStatusInput(req.body);
+
+    // check role
+    const checkRole = req.user.role != "Seller";
+    if (checkRole) {
+      errors.email = "You are not authorized";
+      return res.status(400).send(errors);
+    }
 
     // check status
     const checkStatus = req.user.status === "Block";
@@ -256,17 +331,49 @@ router.delete(
       return res.status(400).send(errors);
     }
 
-    // find by user id and product id
-    SellerProduct.findOneAndDelete({
+    // check validation
+    if (!isValid) {
+      return res.status(400).send(errors);
+    }
+
+    const { status } = req.body;
+
+    // find seller by producT ID and user ID
+    SellerProduct.findOne({
       _id: req.params.p_id,
       user: req.user._id
-    }).then(product => {
-      // Save
-      product
-        .save()
-        .then(product => res.status(200).send(product))
-        .catch(err => res.status(400).send(err));
-    });
+    })
+      .then(product => {
+        if (!product) {
+          return res.status(400).send("No product");
+        }
+
+        // find seller product status and match the ID and update the status
+        SellerProduct.findOneAndUpdate(
+          { productstatus: { $elemMatch: { user: req.params.user_id } } },
+          { $set: { "productstatus.$.status": status } },
+          { new: true }
+        ).then(product => {
+          // find customer product status and match the ID and update the status
+          Customer.findOneAndUpdate(
+            {
+              purchaseproducts: {
+                $elemMatch: {
+                  user: req.params.user_id,
+                  product: req.params.p_id
+                }
+              }
+            },
+            { $set: { "purchaseproducts.$.status": status } },
+            { new: true }
+          ).then(() => res.status(200).send(product));
+        });
+      })
+
+      .catch(err => {
+        errors.product = "No Product found";
+        return res.status(404).send(errors);
+      });
   }
 );
 

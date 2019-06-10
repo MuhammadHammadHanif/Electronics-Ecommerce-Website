@@ -6,6 +6,7 @@ const gravatar = require("gravatar");
 
 // User model
 const User = require("../../models/User");
+const Customer = require("../../models/Customer");
 
 // key for JWT token
 const key = require("../../config/keys/keys").secretOrKey;
@@ -56,7 +57,14 @@ router.post("/register", (req, res) => {
         newUser.password = hash;
         newUser
           .save()
-          .then(user => res.send(user))
+          .then(user => {
+            if (user.role == "Customer") {
+              new Customer({
+                user: user._id
+              }).save();
+            }
+            res.send(user);
+          })
           .catch(err => console.log(err));
       });
     });

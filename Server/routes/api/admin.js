@@ -1,8 +1,6 @@
 const express = require("express");
 const bycrypt = require("bcryptjs");
-const jwt = require("jsonwebtoken");
 const passport = require("passport");
-const gravatar = require("gravatar");
 
 // User model
 const User = require("../../models/User");
@@ -38,7 +36,7 @@ router.post(
       return res.status(400).send(errors);
     }
 
-    const { email, password } = req.body;
+    const { email, password, oldpassword } = req.body;
 
     User.findOne({ email })
       .then(user => {
@@ -47,6 +45,14 @@ router.post(
           errors.email = "Email Doesn't Exists";
           return res.status(400).send(errors);
         }
+        // checking old password
+        bycrypt.compare(oldpassword, user.password).then(isMatch => {
+          // user found
+          if (!isMatch) {
+            errors.oldpassword = "Incorrect Password";
+            return res.status(400).send(errors);
+          }
+        });
         user.password = password;
         bycrypt.genSalt(10, (err, salt) => {
           bycrypt.hash(user.password, salt, (err, hash) => {
@@ -117,7 +123,7 @@ router.get(
       errors.email = "You are not authorized";
       return res.status(400).send(errors);
     }
-    // find by user id
+    // find all
     User.find({})
       .then(user => {
         if (user.length === 0) {
