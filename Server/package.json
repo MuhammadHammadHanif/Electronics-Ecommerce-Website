@@ -4,8 +4,11 @@
   "description": "E-commerce Portal",
   "main": "server.js",
   "scripts": {
+    "client-install": "cd ../client && npm install ",
     "start": "node server.js",
-    "server": "nodemon server.js"
+    "server": "nodemon server.js",
+    "client": "cd ../client && npm start",
+    "dev": "concurrently \"npm run start\" \"npm run client\""
   },
   "author": "",
   "license": "ISC",
